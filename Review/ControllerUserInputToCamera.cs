@@ -11,34 +11,45 @@ namespace Exmaple
 	{
 		private const float WheelZoomFactor = 1.1f;
 
-		private readonly Widget inputOwner;
+		private readonly List<Widget> inputOwners;
 		private readonly Camera camera;
-		private readonly DragGesture dragGesture;
-		private readonly PinchGesture pinchGesture;
-
+		private readonly List<DragGesture> dragGestures;
+		private readonly List<PinchGesture> pinchGestures;
+		
 		public bool subscribed;
 		
 		public bool Enabled;
 		
-		public ControllerUserInputToCamera(Camera camera, Widget inputOwner)
+		public ControllerUserInputToCamera(Camera camera, List<Widget> inputOwners)
 		{
-			this.inputOwner = inputOwner;
+			this.inputOwners = inputOwners;
 			this.camera = camera;
 
-			dragGesture = new KineticDragGesture(new DeceleratingKineticMotionStrategy(0.97f, 1.002f));
-			pinchGesture = new PinchGesture(exclusive: true);
+			dragGestures = new List<DragGesture>();
+			pinchGestures = new List<PinchGesture>();
 		}
 
 		void IController.OnStart()
 		{
-			inputOwner.Gestures.Add(dragGesture);
-			inputOwner.Gestures.Add(pinchGesture);
+			foreach (var inputOwner in inputOwners) {
+				var dragGesture = new KineticDragGesture(new DeceleratingKineticMotionStrategy(0.97f, 1.002f));
+				var pinchGesture = new PinchGesture(exclusive: true);
+
+				inputOwner.Gestures.Add(dragGesture);
+				dragGestures.Add(dragGesture);
+				inputOwner.Gestures.Add(pinchGesture);
+				pinchGestures.Add(pinchGesture);
+			}
 		}
 
 		void IController.OnStop()
 		{
-			inputOwner.Gestures.Remove(dragGesture);
-			inputOwner.Gestures.Remove(pinchGesture);
+			for (int i = 0; i < inputOwners.Count; i++) {
+				var inputOwner = inputOwners[i];
+				inputOwner.Gestures.Remove(dragGestures[i]);
+				inputOwner.Gestures.Remove(pinchGestures[i]);
+			}
+			
 			if (subscribed)
 			{
 				subscribed = false;
@@ -68,26 +79,44 @@ namespace Exmaple
 
 		private void SubscribeOnGestures()
 		{
-			dragGesture.Changed += OnDragged;
-			pinchGesture.Changed += OnPinched;
+			for (int i = 0; i < inputOwners.Count; i++) {
+				var dragGesture = dragGestures[i];
+				var pinchGesture = pinchGestures[i];
+				dragGesture.Changed += OnDragged;
+				pinchGesture.Changed += OnPinched;
+			}
 		}
 
 		private void UnsubscribeFromGestures()
 		{
-			dragGesture.Changed -= OnDragged;
-			pinchGesture.Changed -= OnPinched;
+			for (int i = 0; i < inputOwners.Count; i++) {
+				var dragGesture = dragGestures[i];
+				var pinchGesture = pinchGestures[i];
+				dragGesture.Changed -= OnDragged;
+				pinchGesture.Changed -= OnPinched;
+			}
 		}
 
 		private void OnPinched()
 		{
-			camera.Position -= pinchGesture.LastDragDistance / camera.Zoom;
-			float zoom = ClampZoom(camera.Zoom * pinchGesture.LastPinchScale);
-			ZoomOrigin(pinchGesture.MousePosition, zoom);
+			for (int i = 0; i < inputOwners.Count; i++) {
+				var pinchGesture = pinchGestures[i];
+				if (pinchGesture.IsActive) {
+					camera.Position -= pinchGesture.LastDragDistance / camera.Zoom;
+					float zoom = ClampZoom(camera.Zoom * pinchGesture.LastPinchScale);
+					ZoomOrigin(pinchGesture.MousePosition, zoom);
+				}
+			}
 		}
 
 		private void OnDragged()
 		{
-			camera.Position -= dragGesture.LastDragDistance / camera.Zoom;
+			for (int i = 0; i < inputOwners.Count; i++) {
+				var dragGesture = dragGestures[i];
+				if (dragGesture.IsActive) {
+					camera.Position -= dragGesture.LastDragDistance / camera.Zoom;
+				}
+			}
 		}
 
 		private void ZoomOrigin(in Vector2 origin, float zoom)
