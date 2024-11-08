@@ -1,19 +1,19 @@
 public class Player
 {
-    public int Health {
-        get; private set;
-    }
+    public int Health { get; private set; }
 
-    public Player(int health) {
+    public Player(int health)
+    {
         Health = health;
     }
 
-    public void SetHealth(int value) {
+    public void SetHealth(int value)
+    {
         Health = value;
     }
 }
 
-class Program
+public class Program
 {
     private const int NewPayerHealth = 100;
     private const int Damage = 10;
